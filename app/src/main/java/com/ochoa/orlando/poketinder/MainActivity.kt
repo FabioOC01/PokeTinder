@@ -3,11 +3,8 @@ package com.ochoa.orlando.poketinder
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.ochoa.orlando.poketinder.databinding.ActivityMainBinding
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
+import android.widget.Toast
+import androidx.core.view.isVisible
 
 class MainActivity : AppCompatActivity() {
 
@@ -17,34 +14,34 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding : ActivityMainBinding
 
+    private val viewModel by lazy { MainViewModel() }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         binding.rvTinderPokemon.adapter = adapter
-        getAllPokemons()
+        observeValues()
     }
 
-    private fun getRetrofit(): Retrofit {
-        return Retrofit.Builder()
-            .baseUrl("https://pokeapi.co")
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-    }
+    private fun observeValues() {
+        viewModel.isLoading.observe(this) { isLoading ->
+            binding.progressBar.isVisible = isLoading
+        }
 
-    private fun getAllPokemons() {
-        CoroutineScope(Dispatchers.IO).launch {
-            val request = getRetrofit().create(PokemonAPI::class.java).getPokemons()
-            if (request.isSuccessful) {
-                request.body()?.let {
-                    runOnUiThread {
-                        adapter.list = it.results
-                        adapter.notifyDataSetChanged()
-                    }
-                }
-            }
+        viewModel.pokemonList.observe(this) { pokemonList ->
+            adapter.list = pokemonList
+            adapter.notifyDataSetChanged()
+        }
+
+        viewModel.errorApi.observe(this) { errorMessage ->
+            showMessage(errorMessage)
         }
     }
+
+    private fun showMessage(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    }
 }
+
 
